@@ -1,0 +1,17 @@
+# Flutter-related
+**/Flutter/ephemeral/
+**/Pods/
+
+# Xcode-related
+**/dgph
+**/xcuserdata/
+build/
+.dart_tool/
+.idea/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/.gradle
+ios/Pods
+*.iml

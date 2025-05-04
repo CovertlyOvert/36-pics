@@ -1,0 +1,19 @@
+name: thirtysix_pics
+description: A minimalist photo app with 36-shot limit
+version: 1.0.0+1
+
+environment:
+  sdk: '^3.7.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  uuid: ^4.3.1
+  camera: ^0.10.5+2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
