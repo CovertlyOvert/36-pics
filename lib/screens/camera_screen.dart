@@ -1,7 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'dart:io';
-import 'gallery_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   final String tripName;
@@ -15,10 +14,10 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
+  bool _cameraError = false;
 
   int photoCount = 0;
   final int maxPhotos = 36;
-  List<String> photoPaths = [];
 
   @override
   void initState() {
@@ -27,35 +26,23 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _initializeCamera() async {
-    if (Platform.isIOS && !Platform.isMacOS) {
-      try {
+    try {
+      if (Platform.isIOS && !Platform.isMacOS) {
         final cameras = await availableCameras();
         final camera = cameras.first;
 
         _controller = CameraController(camera, ResolutionPreset.medium);
         _initializeControllerFuture = _controller!.initialize();
-      } catch (e) {
-        debugPrint('Camera init failed: $e');
-        _initializeControllerFuture = Future.value(); // fallback
+      } else {
+        _initializeControllerFuture = Future.value();
       }
-    } else {
-      _initializeControllerFuture = Future.value(); // simulator fallback
+    } catch (e) {
+      debugPrint('Camera init failed: $e');
+      _cameraError = true;
+      _initializeControllerFuture = Future.value();
     }
 
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void _mockCapture() {
-    if (photoCount >= maxPhotos) return;
-
-    setState(() {
-      photoCount += 1;
-      photoPaths.add('mock_photo_$photoCount.jpg');
-    });
-
-    debugPrint("📸 Mock photo taken! Saved as mock_photo_$photoCount.jpg");
+    if (mounted) setState(() {});
   }
 
   @override
@@ -68,104 +55,126 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: _initializeControllerFuture == null
-          ? const Center(child: CircularProgressIndicator())
-          : FutureBuilder(
-              future: _initializeControllerFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return Stack(
-                    children: [
-                      // Mock camera preview
-                      Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        color: Colors.grey[900],
-                        child: const Center(
-                          child: Text(
-                            'Camera Preview (Mocked)',
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ),
-                      ),
-                      // Trip name and photo count
-                      Positioned(
-                        top: 50,
-                        left: 20,
-                        right: 20,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              widget.tripName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontFamily: 'Courier',
-                              ),
-                            ),
-                            Text(
-                              '$photoCount/$maxPhotos',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontFamily: 'Courier',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // View Gallery Button
-                      Positioned(
-                        bottom: 100,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GalleryScreen(photoPaths: photoPaths),
-                                ),
-                              );
-                            },
-                            child: const Text("View Gallery"),
-                          ),
-                        ),
-                      ),
-                      // Capture button
-                      Positioned(
-                        bottom: 40,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: GestureDetector(
-                            onTap: photoCount < maxPhotos ? _mockCapture : null,
-                            child: Container(
-                              width: 70,
-                              height: 70,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: photoCount < maxPhotos ? Colors.white : Colors.grey,
-                                  width: 4,
-                                ),
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.camera_alt, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                } else {
-                  return const Center(child: CircularProgressIndicator());
-                }
-              },
+      body: FutureBuilder(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (_cameraError || snapshot.hasError) {
+            return _mockViewfinder(message: 'Camera not supported or failed to load.');
+          }
+
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                _controller != null
+                    ? CameraPreview(_controller!)
+                    : _mockViewfinder(),
+                _sepiaGrainOverlay(),
+                _crosshairOverlay(),
+                _topBar(),
+                _shutterButton(),
+              ],
+            );
+          } else {
+            return const Center(child: CircularProgressIndicator(color: Colors.white));
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _mockViewfinder({String message = 'Camera Preview (Mocked)'}) {
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/mock_viewfinder.jpg'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 16,
+          fontFamily: 'Inter',
+        ),
+      ),
+    );
+  }
+
+  Widget _sepiaGrainOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.2),
+      foregroundDecoration: const BoxDecoration(
+        gradient: RadialGradient(
+          colors: [
+            Color.fromRGBO(112, 66, 20, 0.1),
+            Colors.transparent,
+          ],
+          radius: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _crosshairOverlay() {
+    return Center(
+      child: Image.asset(
+        'assets/overlays/crosshair.webp',
+        width: 60,
+        height: 60,
+        color: Colors.white70,
+      ),
+    );
+  }
+
+  Widget _topBar() {
+    return Positioned(
+      top: 50,
+      left: 20,
+      right: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            widget.tripName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontFamily: 'Courier Prime',
             ),
+          ),
+          Text(
+            '$photoCount/36',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontFamily: 'Courier Prime',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shutterButton() {
+    return Positioned(
+      bottom: 40,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4),
+          ),
+          child: const Center(
+            child: Icon(Icons.camera_alt, color: Colors.white),
+          ),
+        ),
+      ),
     );
   }
 }

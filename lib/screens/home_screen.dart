@@ -1,52 +1,80 @@
 import 'package:flutter/material.dart';
-import 'new_trip_screen.dart';
+import 'package:thirtysix_pics/screens/new_trip_screen.dart';
+import 'package:thirtysix_pics/theme/theme.dart';
+import 'package:thirtysix_pics/widgets/retro_button.dart';
+import 'package:thirtysix_pics/widgets/vintage_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Placeholder trips
-    final trips = [
-      {'name': 'Goa 2025', 'date': 'March 12', 'count': '28'},
-      {'name': 'Manali 2024', 'date': 'Jan 5', 'count': '36'},
-    ];
-
     return Scaffold(
-      appBar: AppBar(title: const Text('36 Pics')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const NewTripScreen()),
-                );
-              },
-              child: const Text('+ Start New Trip'),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: trips.length,
-                itemBuilder: (context, index) {
-                  final trip = trips[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(trip['name']!),
-                      subtitle: Text('${trip['date']} — ${trip['count']}/36 photos'),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // Navigate to gallery
-                      },
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.movie_creation_outlined,
+                    color: AppColors.foreground, size: 36),
+                const SizedBox(height: 8),
+                Text(
+                  "36 Pics",
+                  style: TextStyle(
+                    fontFamily: AppFonts.heading,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Capture moments, not megapixels",
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.foreground.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // New Adventure Card
+                VintageCard(
+                  title: "New Adventure",
+                  child: RetroButton(
+                    text: "Load New Film",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const NewTripScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Developed Rolls Card
+                VintageCard(
+                  title: "Developed Rolls",
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      "No developed film rolls yet",
+                      style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        color: AppColors.foreground.withOpacity(0.6),
+                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

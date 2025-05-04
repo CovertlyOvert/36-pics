@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/trip.dart';
 import 'camera_screen.dart';
+import '../theme/theme.dart';
+import '../widgets/retro_button.dart';
+import '../widgets/polaroid_card.dart';
 
 class NewTripScreen extends StatefulWidget {
   const NewTripScreen({super.key});
@@ -23,7 +26,6 @@ class _NewTripScreenState extends State<NewTripScreen> {
       photoPaths: [],
     );
 
-    // Navigate to camera screen
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -35,21 +37,43 @@ class _NewTripScreenState extends State<NewTripScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Start New Trip')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: _tripNameController,
-              decoration: const InputDecoration(labelText: 'Trip Name'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _startTrip,
-              child: const Text('Start Trip'),
-            ),
-          ],
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'New Trip',
+          style: TextStyle(
+            fontFamily: 'PlayfairDisplay',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.foreground,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: Center(
+        child: PolaroidCard(
+          title: 'Name Your Trip',
+          child: Column(
+            children: [
+              TextField(
+                controller: _tripNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Trip Name',
+                  labelStyle: TextStyle(
+                    fontFamily: 'Inter',
+                    color: AppColors.foreground,
+                  ),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              RetroButton(
+                text: 'Start Trip',
+                onPressed: _startTrip,
+              ),
+            ],
+          ),
         ),
       ),
     );
