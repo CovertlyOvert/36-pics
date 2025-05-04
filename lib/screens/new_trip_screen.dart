@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:thirtysix_pics/models/trip.dart';
+import 'package:thirtysix_pics/screens/camera_screen.dart';
+import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:uuid/uuid.dart';
-import '../models/trip.dart';
-import 'camera_screen.dart';
-import '../theme/theme.dart';
-import '../widgets/retro_button.dart';
-import '../widgets/polaroid_card.dart';
 
 class NewTripScreen extends StatefulWidget {
   const NewTripScreen({super.key});
@@ -39,41 +37,74 @@ class _NewTripScreenState extends State<NewTripScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'New Trip',
-          style: TextStyle(
-            fontFamily: 'PlayfairDisplay',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text("New Trip"),
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.foreground,
         elevation: 0,
-        centerTitle: true,
       ),
-      body: Center(
-        child: PolaroidCard(
-          title: 'Name Your Trip',
-          child: Column(
-            children: [
-              TextField(
-                controller: _tripNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Trip Name',
-                  labelStyle: TextStyle(
-                    fontFamily: 'Inter',
-                    color: AppColors.foreground,
-                  ),
-                  border: OutlineInputBorder(),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
+        child: Column(
+          children: [
+            // Hero animation for icon
+            Hero(
+              tag: 'film-roll',
+              child: Icon(Icons.movie_creation_outlined,
+                  color: AppColors.primary, size: 48),
+            ),
+            const SizedBox(height: 24),
+
+            Text(
+              "Name Your Roll",
+              style: TextStyle(
+                fontFamily: AppFonts.heading,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.foreground,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            TextField(
+              controller: _tripNameController,
+              decoration: InputDecoration(
+                labelText: "Trip Name",
+                labelStyle: TextStyle(
+                  fontFamily: AppFonts.body,
+                  color: AppColors.foreground.withOpacity(0.7),
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border),
                 ),
               ),
-              const SizedBox(height: 20),
-              RetroButton(
-                text: 'Start Trip',
-                onPressed: _startTrip,
+              style: TextStyle(
+                fontFamily: AppFonts.body,
+                color: AppColors.foreground,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+
+            ElevatedButton.icon(
+              onPressed: _startTrip,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.primaryForeground,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              icon: const Icon(Icons.camera_alt),
+              label: Text(
+                "Start Shooting",
+                style: TextStyle(
+                  fontFamily: AppFonts.mono,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

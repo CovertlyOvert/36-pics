@@ -9,6 +9,13 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dummy developed trips
+    final trips = [
+      {'name': 'Goa 2025', 'date': 'March 12', 'count': '28'},
+      {'name': 'Manali 2024', 'date': 'Jan 5', 'count': '36'},
+      {'name': 'Kerala Backwaters', 'date': 'Dec 15', 'count': '21'},
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -18,8 +25,11 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.movie_creation_outlined,
+                Hero(
+                  tag: 'film-roll',
+                  child: Icon(Icons.movie_creation_outlined,
                     color: AppColors.foreground, size: 36),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   "36 Pics",
@@ -58,18 +68,43 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Developed Rolls Card
+                // Developed Rolls List
                 VintageCard(
                   title: "Developed Rolls",
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      "No developed film rolls yet",
-                      style: TextStyle(
-                        fontFamily: AppFonts.body,
-                        color: AppColors.foreground.withOpacity(0.6),
-                      ),
-                    ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: trips.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(color: AppColors.border),
+                    itemBuilder: (context, index) {
+                      final trip = trips[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          trip['name']!,
+                          style: TextStyle(
+                            fontFamily: AppFonts.heading,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                        subtitle: Text(
+                          "${trip['date']} — ${trip['count']}/36 photos",
+                          style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 14,
+                            color: AppColors.foreground.withOpacity(0.7),
+                          ),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios,
+                            size: 16, color: AppColors.foreground),
+                        onTap: () {
+                          // TODO: Navigate to gallery view
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
