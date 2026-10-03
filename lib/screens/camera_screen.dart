@@ -46,7 +46,11 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _startController(CameraDescription camera) async {
-    final controller = CameraController(camera, ResolutionPreset.medium);
+    final controller = CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
     _controller = controller;
     _initializeControllerFuture = controller.initialize();
     await _initializeControllerFuture;

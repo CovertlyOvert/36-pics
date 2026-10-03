@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>36 Pics needs camera access to let you shoot exposures for your roll.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>36 Pics saves your developed photos to your photo library.</string>
 </dict>
 </plist>
