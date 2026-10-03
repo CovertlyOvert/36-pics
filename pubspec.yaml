@@ -25,7 +25,6 @@ flutter:
   assets:
     - assets/mock_viewfinder.jpg
     - assets/fonts/
-    - assets/overlays/crosshair.webp
 
   fonts:
     - family: Inter

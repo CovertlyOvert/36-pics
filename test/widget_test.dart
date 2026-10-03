@@ -1,30 +1,36 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:thirtysix_pics/main.dart';
+import 'package:thirtysix_pics/theme/theme.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  tearDown(() => ThemeController.instance.setMode(AppThemeMode.vintage));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('Library screen shows title and roll data',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ThirtySixPicsApp());
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Exposures'), findsOneWidget);
+    expect(find.text("Euro Trip '25"), findsOneWidget);
+    expect(find.text('Goa 2025'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('You screen can switch between Vintage and Darkroom',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ThirtySixPicsApp());
+    expect(ThemeController.instance.mode, AppThemeMode.vintage);
+
+    await tester.tap(find.text('YOU'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Darkroom'));
+    await tester.pumpAndSettle();
+
+    expect(ThemeController.instance.mode, AppThemeMode.darkroom);
+
+    await tester.tap(find.text('Vintage'));
+    await tester.pumpAndSettle();
+
+    expect(ThemeController.instance.mode, AppThemeMode.vintage);
   });
 }
