@@ -12,12 +12,41 @@ class GalleryScreen extends StatelessWidget {
 
   Future<void> _saveAll(BuildContext context, Roll roll, List<File> files) async {
     final messenger = ScaffoldMessenger.of(context);
+    final albumName = '36 Pics - ${roll.name}';
+    final choice = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_album_outlined, color: AppColors.primary),
+                title: Text('Save as album', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.cardForeground)),
+                subtitle: Text('Creates "$albumName" in Photos', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined, color: AppColors.primary),
+                title: Text('Save photos only', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.cardForeground)),
+                subtitle: Text('Adds them to your library, no album', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
     messenger.showSnackBar(const SnackBar(content: Text('Saving to Photos…')));
-    final saved = await PhotoService.exportToGallery(files, '36 Pics - ${roll.name}');
+    final saved = await PhotoService.exportToGallery(files, albumName: choice ? albumName : null);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
       content: Text(saved == files.length
-          ? 'Saved ${files.length} photos to Photos'
+          ? (choice ? 'Saved ${files.length} photos to album "$albumName"' : 'Saved ${files.length} photos to Photos')
           : 'Saved $saved of ${files.length} photos — check Photos access in Settings'),
     ));
   }

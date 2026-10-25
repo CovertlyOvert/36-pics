@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 
 class PhotoService {
-  /// Copies developed photos into the system Photos library. Returns how many
-  /// were saved.
-  static Future<int> exportToGallery(List<File> files, String albumName) async {
+  /// Copies developed photos into the system Photos library, filed into
+  /// [albumName] when given. Returns how many were saved.
+  static Future<int> exportToGallery(List<File> files, {String? albumName}) async {
     var saved = 0;
     for (final file in files) {
       try {
