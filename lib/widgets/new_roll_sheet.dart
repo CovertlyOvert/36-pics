@@ -1,26 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 
-enum FilmStock { classic, noir, faded70s }
-
-extension on FilmStock {
-  String get label => switch (this) {
-        FilmStock.classic => 'Classic',
-        FilmStock.noir => 'Noir',
-        FilmStock.faded70s => "Faded '70s",
-      };
-
-  List<Color> get swatch => switch (this) {
-        FilmStock.classic => const [Color(0xFFE7A05A), Color(0xFFB5502E)],
-        FilmStock.noir => const [Color(0xFF9A9388), Color(0xFF4C463D)],
-        FilmStock.faded70s => const [Color(0xFFD9B8C9), Color(0xFF8E7CA8)],
-      };
-}
-
-/// Shows the "Load New Film" bottom sheet and resolves with the trip name
-/// the user entered, or null if they cancelled.
-Future<String?> showNewRollSheet(BuildContext context) {
-  return showModalBottomSheet<String>(
+/// Shows the "Load New Film" bottom sheet and resolves with the trip name and
+/// film stock the user chose, or null if they cancelled.
+Future<({String name, FilmStock stock})?> showNewRollSheet(BuildContext context) {
+  return showModalBottomSheet<({String name, FilmStock stock})>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -192,7 +177,7 @@ class _NewRollSheetState extends State<_NewRollSheet> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   final name = _controller.text.trim();
-                  Navigator.pop(context, name.isEmpty ? "Untitled Roll" : name);
+                  Navigator.pop(context, (name: name.isEmpty ? "Untitled Roll" : name, stock: _selected));
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

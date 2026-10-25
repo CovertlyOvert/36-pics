@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:thirtysix_pics/main.dart';
+import 'package:image/image.dart' as img;
+import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 
@@ -51,7 +54,66 @@ void main() {
     expect(RollStore.instance.developDelay, const Duration(days: 7));
   });
 
+  group('Film stocks', () {
+    final colorful = img.Image(width: 8, height: 8);
+    for (final p in colorful) {
+      p
+        ..r = 220
+        ..g = 90
+        ..b = 40;
+    }
+    final jpeg = Uint8List.fromList(img.encodeJpg(colorful, quality: 95));
+
+    test('Noir turns a colour photo black and white', () {
+      final out = img.decodeJpg(bakeFilmStock(jpeg, FilmStock.noir))!;
+      final p = out.getPixel(4, 4);
+      expect((p.r - p.g).abs(), lessThan(6));
+      expect((p.g - p.b).abs(), lessThan(6));
+    });
+
+    test("Faded '70s lifts the blacks and warms the image", () {
+      final dark = img.Image(width: 8, height: 8);
+      for (final p in dark) {
+        p
+          ..r = 0
+          ..g = 0
+          ..b = 0;
+      }
+      final out = img.decodeJpg(bakeFilmStock(Uint8List.fromList(img.encodeJpg(dark)), FilmStock.faded70s))!;
+      final p = out.getPixel(4, 4);
+      expect(p.r, greaterThan(20));
+      expect(p.r, greaterThan(p.b));
+    });
+
+    test('Classic leaves the photo untouched', () {
+      expect(bakeFilmStock(jpeg, FilmStock.classic), same(jpeg));
+    });
+  });
+
   group('RollStore', () {
+    test("remembers a roll's film stock across a reload", () async {
+      final store = RollStore.instance;
+      final roll = await store.createRoll('Noir trip', stock: FilmStock.noir);
+
+      await store.load(root: tempRoot);
+
+      expect(store.roll(roll.id)!.stock, FilmStock.noir);
+    });
+
+    test('saves the chosen theme and restores it on launch', () async {
+      ThemeController.instance.setMode(AppThemeMode.darkroom);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final saved = File('${tempRoot.path}/store.json').readAsStringSync();
+      expect(saved, contains('"themeMode":"darkroom"'));
+
+      ThemeController.instance.setMode(AppThemeMode.vintage);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      File('${tempRoot.path}/store.json').writeAsStringSync(saved);
+      await RollStore.instance.load(root: tempRoot);
+
+      expect(ThemeController.instance.mode, AppThemeMode.darkroom);
+    });
+
     test('persists photos and survives a reload', () async {
       final store = RollStore.instance;
       final roll = await store.createRoll('Manali');

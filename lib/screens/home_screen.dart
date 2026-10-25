@@ -48,9 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadNewFilm() async {
-    final name = await showNewRollSheet(context);
-    if (name == null || !mounted) return;
-    final roll = await RollStore.instance.createRoll(name);
+    final choice = await showNewRollSheet(context);
+    if (choice == null || !mounted) return;
+    final roll = await RollStore.instance.createRoll(choice.name, stock: choice.stock);
     if (!mounted) return;
     _openCamera(roll);
   }

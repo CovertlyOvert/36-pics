@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:thirtysix_pics/screens/developing_screen.dart';
+import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:thirtysix_pics/widgets/frame_counter_dial.dart';
@@ -67,7 +68,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
     final controller = CameraController(
       camera,
-      ResolutionPreset.medium,
+      ResolutionPreset.high,
       enableAudio: false,
     );
     _controller = controller;
@@ -156,7 +157,8 @@ class _CameraScreenState extends State<CameraScreen> {
     });
     try {
       final shot = await controller.takePicture();
-      final saved = await RollStore.instance.addPhoto(widget.rollId, File(shot.path));
+      final styled = await applyFilmStock(File(shot.path), _roll.stock);
+      final saved = await RollStore.instance.addPhoto(widget.rollId, styled);
       if (!mounted) return;
       if (!saved) {
         _showError('Could not save photo');
@@ -217,7 +219,12 @@ class _CameraScreenState extends State<CameraScreen> {
                                 child: SizedBox(
                                   width: preview.height,
                                   height: preview.width,
-                                  child: CameraPreview(_controller!),
+                                  child: _roll.stock == FilmStock.classic
+                                      ? CameraPreview(_controller!)
+                                      : ColorFiltered(
+                                          colorFilter: ColorFilter.matrix(_roll.stock.matrix),
+                                          child: CameraPreview(_controller!),
+                                        ),
                                 ),
                               ),
                             ),
