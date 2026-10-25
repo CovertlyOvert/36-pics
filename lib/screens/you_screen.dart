@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 
 class YouScreen extends StatefulWidget {
@@ -13,11 +14,13 @@ class _YouScreenState extends State<YouScreen> {
   void initState() {
     super.initState();
     ThemeController.instance.addListener(_onThemeChanged);
+    RollStore.instance.addListener(_onThemeChanged);
   }
 
   @override
   void dispose() {
     ThemeController.instance.removeListener(_onThemeChanged);
+    RollStore.instance.removeListener(_onThemeChanged);
     super.dispose();
   }
 
@@ -68,7 +71,71 @@ class _YouScreenState extends State<YouScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 32),
+          Text(
+            'DEVELOPING TIME',
+            style: TextStyle(
+              fontFamily: AppFonts.mono,
+              fontSize: 11,
+              letterSpacing: 1.5,
+              color: AppColors.foregroundSoft,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'How long a finished roll takes to develop before you can see it. Applies to rolls you finish from now on.',
+            style: TextStyle(fontSize: 13, height: 1.35, color: AppColors.foregroundSoft),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final option in developDelayOptions)
+                _DelayChip(
+                  label: option.label,
+                  selected: RollStore.instance.developDelay == option.duration,
+                  onTap: () => RollStore.instance.setDevelopDelay(option.duration),
+                ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _DelayChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DelayChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.primary : AppColors.card,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: selected ? AppColors.primaryForeground : AppColors.cardForeground,
+            ),
+          ),
+        ),
       ),
     );
   }

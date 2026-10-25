@@ -1,20 +1,64 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:thirtysix_pics/services/photo_service.dart';
+import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
+import 'package:thirtysix_pics/widgets/confirm_delete_roll.dart';
 
 class GalleryScreen extends StatelessWidget {
-  final String tripName;
-  final String dateLabel;
-  final int photoCount;
+  final String rollId;
 
-  const GalleryScreen({
-    super.key,
-    required this.tripName,
-    required this.dateLabel,
-    required this.photoCount,
-  });
+  const GalleryScreen({super.key, required this.rollId});
+
+  Future<void> _saveAll(BuildContext context, Roll roll, List<File> files) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final albumName = '36 Pics - ${roll.name}';
+    final choice = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_album_outlined, color: AppColors.primary),
+                title: Text('Save as album', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.cardForeground)),
+                subtitle: Text('Creates "$albumName" in Photos', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined, color: AppColors.primary),
+                title: Text('Save photos only', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.cardForeground)),
+                subtitle: Text('Adds them to your library, no album', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
+    messenger.showSnackBar(const SnackBar(content: Text('Saving to Photos…')));
+    final saved = await PhotoService.exportToGallery(files, albumName: choice ? albumName : null);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text(saved == files.length
+          ? (choice ? 'Saved ${files.length} photos to album "$albumName"' : 'Saved ${files.length} photos to Photos')
+          : 'Saved $saved of ${files.length} photos — check Photos access in Settings'),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final roll = RollStore.instance.roll(rollId)!;
+    final tripName = roll.name;
+    final photoCount = roll.photos.length;
+    final dateText = dateLabel(roll.completedAt ?? roll.createdAt);
+    final files = [for (final name in roll.photos) RollStore.instance.photoFile(roll, name)];
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -46,7 +90,7 @@ class GalleryScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '$photoCount/36 · $dateLabel',
+                          '$photoCount/36 · $dateText',
                           style: TextStyle(
                             fontFamily: AppFonts.mono,
                             fontSize: 10.5,
@@ -77,10 +121,16 @@ class GalleryScreen extends StatelessWidget {
                   childAspectRatio: 0.82,
                 ),
                 itemCount: photoCount,
-                itemBuilder: (context, index) => _PolaroidPhoto(index: index),
+                itemBuilder: (context, index) => _PolaroidPhoto(index: index, file: files[index]),
               ),
             ),
-            _ActionToolbar(),
+            _ActionToolbar(
+              onSaveAll: () => _saveAll(context, roll, files),
+              onDelete: () async {
+                final navigator = Navigator.of(context);
+                if (await confirmDeleteRoll(context, roll)) navigator.pop();
+              },
+            ),
           ],
         ),
       ),
@@ -88,23 +138,14 @@ class GalleryScreen extends StatelessWidget {
   }
 }
 
-const _scenePalette = [
-  [Color(0xFFE9C68A), Color(0xFFC98A52), Color(0xFFA8622F)],
-  [Color(0xFF8FB9C9), Color(0xFF3E6E7E), Color(0xFF2E5E6E)],
-  [Color(0xFFD9A79A), Color(0xFFA8522F), Color(0xFF8E4224)],
-  [Color(0xFF9FC9A8), Color(0xFF3E7E5C), Color(0xFF2E6E4C)],
-  [Color(0xFFD9C79A), Color(0xFFA8842F), Color(0xFF8E6E24)],
-  [Color(0xFFC98A9A), Color(0xFF7C3E4F), Color(0xFF6E2E3E)],
-];
-
 class _PolaroidPhoto extends StatelessWidget {
   final int index;
+  final File file;
 
-  const _PolaroidPhoto({required this.index});
+  const _PolaroidPhoto({required this.index, required this.file});
 
   @override
   Widget build(BuildContext context) {
-    final colors = _scenePalette[index % _scenePalette.length];
     final rotation = (index.isEven ? -1.0 : 1.0) * (1.5 + (index % 3));
     return Transform.rotate(
       angle: rotation * 3.14159265 / 180,
@@ -121,30 +162,13 @@ class _PolaroidPhoto extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [colors[0], colors[1]],
-                    stops: const [0.0, 0.65],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 10 + (index % 3) * 14,
-                      top: 10,
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF6EFE0)),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: CustomPaint(painter: _MountainPainter(color: colors[2])),
-                    ),
-                  ],
+              child: Image.file(
+                file,
+                fit: BoxFit.cover,
+                cacheWidth: 600,
+                errorBuilder: (context, error, stack) => ColoredBox(
+                  color: const Color(0xFFE8E0D0),
+                  child: const Center(child: Icon(Icons.broken_image_outlined, color: Color(0xFF8A7B6C))),
                 ),
               ),
             ),
@@ -161,25 +185,6 @@ class _PolaroidPhoto extends StatelessWidget {
       ),
     );
   }
-}
-
-class _MountainPainter extends CustomPainter {
-  final Color color;
-  _MountainPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, size.height * 0.65)
-      ..lineTo(size.width * 0.4, size.height * 0.3)
-      ..lineTo(size.width * 0.65, size.height * 0.65)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MountainPainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _FilmPerforationRow extends StatelessWidget {
@@ -237,6 +242,11 @@ class _RoundIconButton extends StatelessWidget {
 }
 
 class _ActionToolbar extends StatelessWidget {
+  final VoidCallback onSaveAll;
+  final VoidCallback onDelete;
+
+  const _ActionToolbar({required this.onSaveAll, required this.onDelete});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -254,9 +264,9 @@ class _ActionToolbar extends StatelessWidget {
           children: [
             _ToolbarAction(icon: Icons.ios_share, label: 'SHARE'),
             const SizedBox(width: 26),
-            _ToolbarAction(icon: Icons.download_outlined, label: 'SAVE ALL'),
+            _ToolbarAction(icon: Icons.download_outlined, label: 'SAVE ALL', onTap: onSaveAll),
             const SizedBox(width: 26),
-            _ToolbarAction(icon: Icons.print_outlined, label: 'PRINT'),
+            _ToolbarAction(icon: Icons.delete_outline, label: 'DELETE', onTap: onDelete),
           ],
         ),
       ),
@@ -267,13 +277,14 @@ class _ActionToolbar extends StatelessWidget {
 class _ToolbarAction extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
-  const _ToolbarAction({required this.icon, required this.label});
+  const _ToolbarAction({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

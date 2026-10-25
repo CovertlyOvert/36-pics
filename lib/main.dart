@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'services/roll_store.dart';
 import 'theme/theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await RollStore.instance.load();
   runApp(const ThirtySixPicsApp());
 }
 

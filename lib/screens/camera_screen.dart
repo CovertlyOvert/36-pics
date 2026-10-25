@@ -1,18 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:thirtysix_pics/screens/developing_screen.dart';
+import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:thirtysix_pics/widgets/frame_counter_dial.dart';
 
 class CameraScreen extends StatefulWidget {
-  final String tripName;
-  final int initialPhotoCount;
+  final String rollId;
 
-  const CameraScreen({
-    super.key,
-    required this.tripName,
-    this.initialPhotoCount = 0,
-  });
+  const CameraScreen({super.key, required this.rollId});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -24,10 +23,19 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
 
-  late int photoCount = widget.initialPhotoCount;
-  final int maxPhotos = 36;
+  Roll get _roll => RollStore.instance.roll(widget.rollId)!;
+  int get photoCount => _roll.photos.length;
+  final int maxPhotos = rollSize;
   bool _cameraError = false;
   bool _flashOn = false;
+  bool _capturing = false;
+  bool _switching = false;
+  bool _shutterFlash = false;
+  Offset? _focusPoint;
+  double _minZoom = 1;
+  double _maxZoom = 1;
+  double _zoom = 1;
+  double _baseZoom = 1;
 
   @override
   void initState() {
@@ -46,6 +54,17 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _startController(CameraDescription camera) async {
+    final old = _controller;
+    if (old != null) {
+      // Tear the old session down (and its preview out of the tree) before
+      // opening the next one; iOS can't run two capture sessions at once.
+      setState(() {
+        _controller = null;
+        _initializeControllerFuture = null;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      await old.dispose();
+    }
     final controller = CameraController(
       camera,
       ResolutionPreset.medium,
@@ -54,8 +73,34 @@ class _CameraScreenState extends State<CameraScreen> {
     _controller = controller;
     _initializeControllerFuture = controller.initialize();
     await _initializeControllerFuture;
+    _minZoom = await controller.getMinZoomLevel();
+    _maxZoom = (await controller.getMaxZoomLevel()).clamp(_minZoom, 8.0);
+    _zoom = _minZoom;
     if (!mounted) return;
     setState(() {});
+  }
+
+  Future<void> _focusAt(Offset position, Size size) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final point = Offset(position.dx / size.width, position.dy / size.height);
+    setState(() => _focusPoint = position);
+    try {
+      await controller.setFocusPoint(point);
+      await controller.setExposurePoint(point);
+    } catch (e) {
+      debugPrint('Focus failed: $e');
+    }
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _focusPoint = null);
+    });
+  }
+
+  void _setZoom(double value) {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    _zoom = value.clamp(_minZoom, _maxZoom);
+    controller.setZoomLevel(_zoom);
   }
 
   Future<void> _toggleFlash() async {
@@ -71,24 +116,67 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _flipCamera() async {
-    if (_cameras.length < 2) return;
-    final oldController = _controller;
-    _cameraIndex = (_cameraIndex + 1) % _cameras.length;
-    await _startController(_cameras[_cameraIndex]);
-    await oldController?.dispose();
+    if (_cameras.length < 2 || _switching) return;
+    final current = _cameras[_cameraIndex].lensDirection;
+    final next = _cameras.indexWhere((c) => c.lensDirection != current);
+    if (next == -1) return;
+    _switching = true;
+    _cameraIndex = next;
+    _flashOn = false;
+    try {
+      await _startController(_cameras[_cameraIndex]);
+    } catch (e) {
+      debugPrint('Flip camera failed: $e');
+      if (mounted) setState(() => _cameraError = true);
+    } finally {
+      _switching = false;
+    }
   }
 
-  void _capture() {
-    if (photoCount >= maxPhotos) return;
-    setState(() => photoCount++);
-    if (photoCount >= maxPhotos) {
-      Future.delayed(const Duration(milliseconds: 250), () {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DevelopingScreen(tripName: widget.tripName)),
-        );
-      });
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _capture() async {
+    final controller = _controller;
+    if (_capturing ||
+        photoCount >= maxPhotos ||
+        controller == null ||
+        !controller.value.isInitialized) {
+      return;
+    }
+    setState(() {
+      _capturing = true;
+      _shutterFlash = true;
+    });
+    HapticFeedback.mediumImpact();
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (mounted) setState(() => _shutterFlash = false);
+    });
+    try {
+      final shot = await controller.takePicture();
+      final saved = await RollStore.instance.addPhoto(widget.rollId, File(shot.path));
+      if (!mounted) return;
+      if (!saved) {
+        _showError('Could not save photo');
+      } else {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Capture failed: $e');
+      _showError('Capture failed');
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+    if (mounted && photoCount >= maxPhotos) {
+      await RollStore.instance.finishRoll(widget.rollId);
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => DevelopingScreen(rollId: widget.rollId)),
+      );
     }
   }
 
@@ -114,7 +202,53 @@ class _CameraScreenState extends State<CameraScreen> {
               : Stack(
                   fit: StackFit.expand,
                   children: [
-                    CameraPreview(_controller!),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final preview = _controller!.value.previewSize!;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapDown: (d) => _focusAt(d.localPosition, constraints.biggest),
+                          onScaleStart: (_) => _baseZoom = _zoom,
+                          onScaleUpdate: (d) => _setZoom(_baseZoom * d.scale),
+                          child: ClipRect(
+                            child: SizedBox.expand(
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: preview.height,
+                                  height: preview.width,
+                                  child: CameraPreview(_controller!),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    if (_focusPoint != null)
+                      Positioned(
+                        left: _focusPoint!.dx - 32,
+                        top: _focusPoint!.dy - 32,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.amber, width: 1.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _shutterFlash ? 0.7 : 0,
+                        duration: const Duration(milliseconds: 80),
+                        child: Container(color: Colors.white),
+                      ),
+                    ),
 
                     // Rule-of-thirds composition guide
                     IgnorePointer(
@@ -138,7 +272,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                 border: Border.all(color: AppColors.primary.withOpacity(0.5)),
                               ),
                               child: Text(
-                                widget.tripName.toUpperCase(),
+                                _roll.name.toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
