@@ -1,34 +1,32 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:thirtysix_pics/screens/gallery_screen.dart';
+import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 
-/// Shown right after a roll's 36th exposure. Real film takes time to
-/// develop; we simulate a short version of that wait rather than
-/// revealing the shots instantly, so finishing a roll still feels like
-/// an event.
+/// Shown while a finished roll develops. The wait is wall-clock based
+/// (roll.developAt), so it keeps counting while the app is closed.
 class DevelopingScreen extends StatefulWidget {
-  final String tripName;
+  final String rollId;
 
-  const DevelopingScreen({super.key, required this.tripName});
+  const DevelopingScreen({super.key, required this.rollId});
 
   @override
   State<DevelopingScreen> createState() => _DevelopingScreenState();
 }
 
 class _DevelopingScreenState extends State<DevelopingScreen> {
-  static const _developDuration = Duration(seconds: 4);
-  double _progress = 0;
   Timer? _timer;
+
+  Roll get _roll => RollStore.instance.roll(widget.rollId)!;
 
   @override
   void initState() {
     super.initState();
-    const tick = Duration(milliseconds: 80);
-    final steps = _developDuration.inMilliseconds / tick.inMilliseconds;
-    _timer = Timer.periodic(tick, (timer) {
-      setState(() => _progress = (_progress + 1 / steps).clamp(0.0, 1.0));
-      if (_progress >= 1.0) timer.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (_roll.isDeveloped) _timer?.cancel();
     });
   }
 
@@ -40,7 +38,9 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isReady = _progress >= 1.0;
+    final roll = _roll;
+    final isReady = roll.isDeveloped;
+    final progress = isReady ? 1.0 : roll.developProgress;
     return Scaffold(
       backgroundColor: AppColors.primaryDeep,
       body: Container(
@@ -67,7 +67,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                         width: 150,
                         height: 150,
                         child: CircularProgressIndicator(
-                          value: _progress,
+                          value: progress,
                           strokeWidth: 2.5,
                           backgroundColor: Colors.white.withOpacity(0.15),
                           valueColor: AlwaysStoppedAnimation(AppColors.secondary),
@@ -79,7 +79,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                 ),
                 const SizedBox(height: 28),
                 Text(
-                  'ROLL · ${widget.tripName.toUpperCase()}',
+                  'ROLL · ${roll.name.toUpperCase()}',
                   style: TextStyle(
                     fontFamily: AppFonts.mono,
                     fontSize: 11,
@@ -102,7 +102,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '36 exposures',
+                  '${roll.photos.length} exposures',
                   style: TextStyle(fontSize: 13.5, color: AppColors.primaryForeground.withOpacity(0.75)),
                 ),
                 const SizedBox(height: 28),
@@ -113,7 +113,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
-                          value: _progress,
+                          value: progress,
                           minHeight: 4,
                           backgroundColor: Colors.white.withOpacity(0.12),
                           valueColor: AlwaysStoppedAnimation(AppColors.secondary),
@@ -121,7 +121,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isReady ? 'READY TO VIEW' : "WE'LL NOTIFY YOU WHEN READY",
+                        isReady ? 'READY TO VIEW' : 'READY IN ${formatRemaining(roll.timeRemaining).toUpperCase()}',
                         style: TextStyle(
                           fontFamily: AppFonts.mono,
                           fontSize: 10,
@@ -133,34 +133,28 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                AnimatedOpacity(
-                  opacity: isReady ? 1 : 0,
-                  duration: const Duration(milliseconds: 300),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isReady
-                          ? () => Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GalleryScreen(
-                                    tripName: widget.tripName,
-                                    dateLabel: 'TODAY',
-                                    photoCount: 36,
-                                  ),
-                                ),
-                              )
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryForeground,
-                        foregroundColor: AppColors.primaryDeep,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: const Text('View Developed Roll', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: isReady
+                      ? ElevatedButton(
+                          onPressed: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => GalleryScreen(rollId: roll.id)),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryForeground,
+                            foregroundColor: AppColors.primaryDeep,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: const Text('View Developed Roll', style: TextStyle(fontWeight: FontWeight.w600)),
+                        )
+                      : TextButton(
+                          onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.primaryForeground),
+                          child: const Text('Back to Library'),
+                        ),
                 ),
               ],
             ),

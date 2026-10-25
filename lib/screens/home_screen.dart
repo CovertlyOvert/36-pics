@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:thirtysix_pics/screens/camera_screen.dart';
+import 'package:thirtysix_pics/screens/developing_screen.dart';
 import 'package:thirtysix_pics/screens/gallery_screen.dart';
 import 'package:thirtysix_pics/screens/you_screen.dart';
+import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:thirtysix_pics/widgets/frame_counter_dial.dart';
 import 'package:thirtysix_pics/widgets/new_roll_sheet.dart';
@@ -14,39 +17,66 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _currentRoll = (name: "Euro Trip '25", route: 'Rome → Florence → Venice', count: 14);
-
-  static const _developedRolls = [
-    (name: 'Goa 2025', date: 'MAR 12', count: 28),
-    (name: 'Manali 2024', date: 'JAN 5', count: 36),
-    (name: 'Kerala Backwaters', date: 'DEC 15', count: 21),
-  ];
+  Timer? _ticker;
 
   @override
   void initState() {
     super.initState();
-    ThemeController.instance.addListener(_onThemeChanged);
+    ThemeController.instance.addListener(_refresh);
+    RollStore.instance.addListener(_refresh);
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && RollStore.instance.hasDevelopingRolls) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    ThemeController.instance.removeListener(_onThemeChanged);
+    _ticker?.cancel();
+    ThemeController.instance.removeListener(_refresh);
+    RollStore.instance.removeListener(_refresh);
     super.dispose();
   }
 
-  void _onThemeChanged() => setState(() {});
+  void _refresh() => setState(() {});
 
-  Future<void> _openNewRollSheet(BuildContext context) async {
-    final tripName = await showNewRollSheet(context);
-    if (tripName == null || !context.mounted) return;
+  void _openCamera(Roll roll) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CameraScreen(tripName: tripName)),
+      MaterialPageRoute(builder: (context) => CameraScreen(rollId: roll.id)),
+    );
+  }
+
+  Future<void> _loadNewFilm() async {
+    final name = await showNewRollSheet(context);
+    if (name == null || !mounted) return;
+    final roll = await RollStore.instance.createRoll(name);
+    if (!mounted) return;
+    _openCamera(roll);
+  }
+
+  void _onShutterTab() {
+    final current = RollStore.instance.currentRoll;
+    if (current != null) {
+      _openCamera(current);
+    } else {
+      _loadNewFilm();
+    }
+  }
+
+  void _openRoll(Roll roll) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            roll.isDeveloped ? GalleryScreen(rollId: roll.id) : DevelopingScreen(rollId: roll.id),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final current = RollStore.instance.currentRoll;
+    final finished = RollStore.instance.finishedRolls;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -94,7 +124,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              sliver: SliverToBoxAdapter(child: _CurrentRollCard(roll: _currentRoll)),
+              sliver: SliverToBoxAdapter(
+                child: _CurrentRollCard(
+                  roll: current,
+                  onContinue: current == null ? _loadNewFilm : () => _openCamera(current),
+                ),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 14),
@@ -104,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Developed Rolls',
+                      'Finished Rolls',
                       style: TextStyle(
                         fontFamily: AppFonts.heading,
                         fontSize: 20,
@@ -113,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Text(
-                      _developedRolls.length.toString().padLeft(3, '0'),
+                      finished.length.toString().padLeft(3, '0'),
                       style: TextStyle(
                         fontFamily: AppFonts.mono,
                         fontSize: 12,
@@ -124,42 +159,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 0.82,
+            if (finished.isEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 110),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    'Rolls you finish will wait here while they develop.',
+                    style: TextStyle(fontSize: 13.5, color: AppColors.foregroundSoft),
+                  ),
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final roll = _developedRolls[index];
-                    return _DevelopedRollCard(
-                      roll: roll,
-                      rotation: index.isEven ? -0.02 : 0.018,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => GalleryScreen(
-                            tripName: roll.name,
-                            dateLabel: roll.date,
-                            photoCount: roll.count,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: _developedRolls.length,
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 0.82,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final roll = finished[index];
+                      return _FinishedRollCard(
+                        roll: roll,
+                        rotation: index.isEven ? -0.02 : 0.018,
+                        onTap: () => _openRoll(roll),
+                      );
+                    },
+                    childCount: finished.length,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
       bottomNavigationBar: _BottomTabBar(
-        onOpenCamera: () => _openNewRollSheet(context),
+        onOpenCamera: _onShutterTab,
         onOpenYou: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const YouScreen()),
@@ -170,12 +207,15 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _CurrentRollCard extends StatelessWidget {
-  final ({String name, String route, int count}) roll;
+  final Roll? roll;
+  final VoidCallback onContinue;
 
-  const _CurrentRollCard({required this.roll});
+  const _CurrentRollCard({required this.roll, required this.onContinue});
 
   @override
   Widget build(BuildContext context) {
+    final roll = this.roll;
+    final count = roll?.photos.length ?? 0;
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -204,7 +244,7 @@ class _CurrentRollCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'CURRENTLY SHOOTING',
+                      roll == null ? 'NO FILM LOADED' : 'CURRENTLY SHOOTING',
                       style: TextStyle(
                         fontFamily: AppFonts.mono,
                         fontSize: 10,
@@ -215,7 +255,7 @@ class _CurrentRollCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      roll.name,
+                      roll?.name ?? 'Start a new roll',
                       style: TextStyle(
                         fontFamily: AppFonts.heading,
                         fontWeight: FontWeight.bold,
@@ -225,7 +265,7 @@ class _CurrentRollCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      roll.route,
+                      roll == null ? '36 shots. Make them count.' : '${rollSize - count} shots left',
                       style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.primaryForeground.withOpacity(0.85),
@@ -235,8 +275,8 @@ class _CurrentRollCard extends StatelessWidget {
                 ),
               ),
               FrameCounterDial(
-                current: roll.count,
-                total: 36,
+                current: count,
+                total: rollSize,
                 ringColor: Colors.white.withOpacity(0.2),
                 progressColor: AppColors.primaryForeground,
                 textColor: AppColors.primaryForeground,
@@ -247,15 +287,7 @@ class _CurrentRollCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CameraScreen(
-                    tripName: roll.name,
-                    initialPhotoCount: roll.count,
-                  ),
-                ),
-              ),
+              onPressed: onContinue,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryForeground,
                 foregroundColor: AppColors.primaryDeep,
@@ -263,9 +295,9 @@ class _CurrentRollCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+              icon: Icon(roll == null ? Icons.movie_filter_outlined : Icons.camera_alt_outlined, size: 18),
               label: Text(
-                'Continue Shooting',
+                roll == null ? 'Load New Film' : 'Continue Shooting',
                 style: TextStyle(fontFamily: AppFonts.body, fontWeight: FontWeight.w600, fontSize: 14.5),
               ),
             ),
@@ -276,15 +308,16 @@ class _CurrentRollCard extends StatelessWidget {
   }
 }
 
-class _DevelopedRollCard extends StatelessWidget {
-  final ({String name, String date, int count}) roll;
+class _FinishedRollCard extends StatelessWidget {
+  final Roll roll;
   final double rotation;
   final VoidCallback onTap;
 
-  const _DevelopedRollCard({required this.roll, required this.rotation, required this.onTap});
+  const _FinishedRollCard({required this.roll, required this.rotation, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final developed = roll.isDeveloped;
     return Transform.rotate(
       angle: rotation,
       child: Material(
@@ -309,7 +342,9 @@ class _DevelopedRollCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _PhotoCollagePlaceholder(seed: roll.name.hashCode)),
+                Expanded(
+                  child: developed ? _PhotoCollage(roll: roll) : _DevelopingTile(roll: roll),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   roll.name,
@@ -324,7 +359,9 @@ class _DevelopedRollCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${roll.count}/36 · ${roll.date}',
+                  developed
+                      ? '${roll.photos.length}/36 · ${dateLabel(roll.completedAt!)}'
+                      : 'Ready in ${formatRemaining(roll.timeRemaining)}',
                   style: TextStyle(
                     fontFamily: AppFonts.mono,
                     fontSize: 10.5,
@@ -340,25 +377,68 @@ class _DevelopedRollCard extends StatelessWidget {
   }
 }
 
-/// A 2x2 collage of soft gradient tiles standing in for real photo
-/// thumbnails — this app has no stored images yet, so the grid is
-/// seeded per-roll purely for visual variety.
-class _PhotoCollagePlaceholder extends StatelessWidget {
-  final int seed;
+class _DevelopingTile extends StatelessWidget {
+  final Roll roll;
 
-  const _PhotoCollagePlaceholder({required this.seed});
-
-  static const _palette = [
-    [Color(0xFFE7A05A), Color(0xFFC1472B)],
-    [Color(0xFF8FB9C9), Color(0xFF3E6E7E)],
-    [Color(0xFFD9C79A), Color(0xFFA8842F)],
-    [Color(0xFFC98A9A), Color(0xFF7C3E4F)],
-    [Color(0xFF9FB88A), Color(0xFF4E6E3E)],
-    [Color(0xFF7FAFC9), Color(0xFF2E5E7E)],
-  ];
+  const _DevelopingTile({required this.roll});
 
   @override
   Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.primaryDeep],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: roll.developProgress,
+                    strokeWidth: 2.5,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: AlwaysStoppedAnimation(AppColors.primaryForeground),
+                  ),
+                  Icon(Icons.camera_roll_outlined, color: AppColors.primaryForeground, size: 18),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'DEVELOPING',
+              style: TextStyle(
+                fontFamily: AppFonts.mono,
+                fontSize: 10,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryForeground.withOpacity(0.85),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoCollage extends StatelessWidget {
+  final Roll roll;
+
+  const _PhotoCollage({required this.roll});
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = roll.photos.take(4).toList();
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: GridView.builder(
@@ -370,15 +450,12 @@ class _PhotoCollagePlaceholder extends StatelessWidget {
         ),
         itemCount: 4,
         itemBuilder: (context, index) {
-          final colors = _palette[(seed.abs() + index) % _palette.length];
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: colors,
-              ),
-            ),
+          if (index >= photos.length) return ColoredBox(color: AppColors.muted);
+          return Image.file(
+            RollStore.instance.photoFile(roll, photos[index]),
+            fit: BoxFit.cover,
+            cacheWidth: 300,
+            errorBuilder: (context, error, stack) => ColoredBox(color: AppColors.muted),
           );
         },
       ),
