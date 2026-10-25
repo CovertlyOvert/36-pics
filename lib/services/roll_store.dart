@@ -183,6 +183,22 @@ class RollStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteRoll(String rollId) async {
+    final roll = this.roll(rollId);
+    if (roll == null) return;
+    _rolls.remove(roll);
+    if (_root != null) {
+      final dir = Directory('${_root!.path}/rolls/${roll.id}');
+      try {
+        if (await dir.exists()) await dir.delete(recursive: true);
+      } catch (e) {
+        debugPrint('Error deleting roll photos: $e');
+      }
+    }
+    await _save();
+    notifyListeners();
+  }
+
   Future<void> setDevelopDelay(Duration delay) async {
     _developDelay = delay;
     await _save();

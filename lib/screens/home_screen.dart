@@ -6,6 +6,7 @@ import 'package:thirtysix_pics/screens/gallery_screen.dart';
 import 'package:thirtysix_pics/screens/you_screen.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
+import 'package:thirtysix_pics/widgets/confirm_delete_roll.dart';
 import 'package:thirtysix_pics/widgets/frame_counter_dial.dart';
 import 'package:thirtysix_pics/widgets/new_roll_sheet.dart';
 
@@ -186,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         roll: roll,
                         rotation: index.isEven ? -0.02 : 0.018,
                         onTap: () => _openRoll(roll),
+                        onLongPress: () => confirmDeleteRoll(context, roll),
                       );
                     },
                     childCount: finished.length,
@@ -312,8 +314,14 @@ class _FinishedRollCard extends StatelessWidget {
   final Roll roll;
   final double rotation;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
-  const _FinishedRollCard({required this.roll, required this.rotation, required this.onTap});
+  const _FinishedRollCard({
+    required this.roll,
+    required this.rotation,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +334,7 @@ class _FinishedRollCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(

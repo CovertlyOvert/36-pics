@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:thirtysix_pics/services/photo_service.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
+import 'package:thirtysix_pics/widgets/confirm_delete_roll.dart';
 
 class GalleryScreen extends StatelessWidget {
   final String rollId;
@@ -123,7 +124,13 @@ class GalleryScreen extends StatelessWidget {
                 itemBuilder: (context, index) => _PolaroidPhoto(index: index, file: files[index]),
               ),
             ),
-            _ActionToolbar(onSaveAll: () => _saveAll(context, roll, files)),
+            _ActionToolbar(
+              onSaveAll: () => _saveAll(context, roll, files),
+              onDelete: () async {
+                final navigator = Navigator.of(context);
+                if (await confirmDeleteRoll(context, roll)) navigator.pop();
+              },
+            ),
           ],
         ),
       ),
@@ -236,8 +243,9 @@ class _RoundIconButton extends StatelessWidget {
 
 class _ActionToolbar extends StatelessWidget {
   final VoidCallback onSaveAll;
+  final VoidCallback onDelete;
 
-  const _ActionToolbar({required this.onSaveAll});
+  const _ActionToolbar({required this.onSaveAll, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +266,7 @@ class _ActionToolbar extends StatelessWidget {
             const SizedBox(width: 26),
             _ToolbarAction(icon: Icons.download_outlined, label: 'SAVE ALL', onTap: onSaveAll),
             const SizedBox(width: 26),
-            _ToolbarAction(icon: Icons.print_outlined, label: 'PRINT'),
+            _ToolbarAction(icon: Icons.delete_outline, label: 'DELETE', onTap: onDelete),
           ],
         ),
       ),

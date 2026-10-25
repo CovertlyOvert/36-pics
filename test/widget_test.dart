@@ -89,6 +89,22 @@ void main() {
       expect(roll.timeRemaining, Duration.zero);
     });
 
+    test('deleting a roll removes it and its photos from disk', () async {
+      final store = RollStore.instance;
+      final roll = await store.createRoll('Doomed');
+      final src = File('${tempRoot.path}/shot.jpg')..writeAsBytesSync([1]);
+      await store.addPhoto(roll.id, src);
+      final photo = store.photoFile(roll, roll.photos.first);
+      expect(photo.existsSync(), isTrue);
+
+      await store.deleteRoll(roll.id);
+
+      expect(store.roll(roll.id), isNull);
+      expect(photo.existsSync(), isFalse);
+      await store.load(root: tempRoot);
+      expect(store.roll(roll.id), isNull);
+    });
+
     test('a roll holds at most 36 photos', () async {
       final store = RollStore.instance;
       final roll = await store.createRoll('Full');
