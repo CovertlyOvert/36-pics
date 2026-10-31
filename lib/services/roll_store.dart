@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:thirtysix_pics/services/film_stock.dart';
+import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:uuid/uuid.dart';
 
 class DevelopDelay {
@@ -28,6 +30,7 @@ class Roll {
   final String id;
   final String name;
   final DateTime createdAt;
+  final FilmStock stock;
   final List<String> photos;
   DateTime? completedAt;
   DateTime? developAt;
@@ -36,6 +39,7 @@ class Roll {
     required this.id,
     required this.name,
     required this.createdAt,
+    this.stock = FilmStock.classic,
     List<String>? photos,
     this.completedAt,
     this.developAt,
@@ -63,6 +67,7 @@ class Roll {
         'id': id,
         'name': name,
         'createdAt': createdAt.toIso8601String(),
+        'stock': stock.name,
         'photos': photos,
         'completedAt': completedAt?.toIso8601String(),
         'developAt': developAt?.toIso8601String(),
@@ -72,6 +77,7 @@ class Roll {
         id: json['id'] as String,
         name: json['name'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        stock: FilmStock.values.asNameMap()[json['stock']] ?? FilmStock.classic,
         photos: List<String>.from(json['photos'] as List),
         completedAt: json['completedAt'] == null ? null : DateTime.parse(json['completedAt'] as String),
         developAt: json['developAt'] == null ? null : DateTime.parse(json['developAt'] as String),
@@ -132,6 +138,7 @@ class RollStore extends ChangeNotifier {
     _root = root ?? await getApplicationDocumentsDirectory();
     _rolls.clear();
     _developDelay = defaultDevelopDelay;
+    var themeMode = AppThemeMode.vintage;
     final file = _storeFile;
     if (await file.exists()) {
       try {
@@ -140,15 +147,19 @@ class RollStore extends ChangeNotifier {
         for (final r in data['rolls'] as List) {
           _rolls.add(Roll.fromJson(r as Map<String, dynamic>));
         }
+        themeMode = AppThemeMode.values.asNameMap()[data['themeMode']] ?? AppThemeMode.vintage;
       } catch (e) {
         debugPrint('Could not read roll store: $e');
       }
     }
+    ThemeController.instance.removeListener(_save);
+    ThemeController.instance.setMode(themeMode);
+    ThemeController.instance.addListener(_save);
     notifyListeners();
   }
 
-  Future<Roll> createRoll(String name) async {
-    final roll = Roll(id: _uuid.v4(), name: name, createdAt: DateTime.now());
+  Future<Roll> createRoll(String name, {FilmStock stock = FilmStock.classic}) async {
+    final roll = Roll(id: _uuid.v4(), name: name, createdAt: DateTime.now(), stock: stock);
     _rolls.add(roll);
     await _save();
     notifyListeners();
@@ -211,8 +222,13 @@ class RollStore extends ChangeNotifier {
     if (_root == null) return;
     final data = {
       'developDelaySeconds': _developDelay.inSeconds,
+      'themeMode': ThemeController.instance.mode.name,
       'rolls': _rolls.map((r) => r.toJson()).toList(),
     };
-    await _storeFile.writeAsString(jsonEncode(data));
+    try {
+      await _storeFile.writeAsString(jsonEncode(data));
+    } catch (e) {
+      debugPrint('Could not save roll store: $e');
+    }
   }
 }

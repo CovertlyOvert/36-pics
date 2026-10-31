@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/services/photo_service.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
@@ -90,7 +91,7 @@ class GalleryScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '$photoCount/36 · $dateText',
+                          '$photoCount/36 · $dateText${roll.stock == FilmStock.classic ? '' : ' · ${roll.stock.label.toUpperCase()}'}',
                           style: TextStyle(
                             fontFamily: AppFonts.mono,
                             fontSize: 10.5,
