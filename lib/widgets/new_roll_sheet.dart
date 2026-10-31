@@ -98,7 +98,7 @@ class _NewRollSheetState extends State<_NewRollSheet> {
               autofocus: false,
               style: TextStyle(fontFamily: AppFonts.heading, fontSize: 19, color: AppColors.cardForeground),
               decoration: InputDecoration(
-                hintText: "Euro Trip '25",
+                hintText: 'New Trip',
                 hintStyle: TextStyle(color: AppColors.cardForeground.withOpacity(0.35)),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
@@ -177,7 +177,7 @@ class _NewRollSheetState extends State<_NewRollSheet> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   final name = _controller.text.trim();
-                  Navigator.pop(context, (name: name.isEmpty ? "Untitled Roll" : name, stock: _selected));
+                  Navigator.pop(context, (name: name.isEmpty ? 'New Trip' : name, stock: _selected));
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

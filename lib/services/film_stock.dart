@@ -24,7 +24,7 @@ extension FilmStockLook on FilmStock {
   List<double> get matrix => switch (this) {
         FilmStock.classic => _identity,
         FilmStock.noir => _look(saturation: 0, contrast: 1.3),
-        FilmStock.faded70s => _look(saturation: 0.8, contrast: 0.88, lift: 14, tint: const [1.06, 1.0, 0.92]),
+        FilmStock.faded70s => _look(saturation: 0.62, contrast: 0.76, lift: 28, tint: const [1.1, 1.0, 0.84]),
       };
 }
 

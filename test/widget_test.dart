@@ -81,8 +81,15 @@ void main() {
       }
       final out = img.decodeJpg(bakeFilmStock(Uint8List.fromList(img.encodeJpg(dark)), FilmStock.faded70s))!;
       final p = out.getPixel(4, 4);
-      expect(p.r, greaterThan(20));
-      expect(p.r, greaterThan(p.b));
+      expect(p.r, greaterThan(35));
+      expect(p.r, greaterThan(p.b) );
+    });
+
+    test("Faded '70s visibly shifts a normal colour photo", () {
+      final out = img.decodeJpg(bakeFilmStock(jpeg, FilmStock.faded70s))!;
+      final p = out.getPixel(4, 4);
+      final before = img.decodeJpg(jpeg)!.getPixel(4, 4);
+      expect((p.r - before.r).abs() + (p.g - before.g).abs() + (p.b - before.b).abs(), greaterThan(60));
     });
 
     test('Classic leaves the photo untouched', () {
