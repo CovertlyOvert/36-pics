@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/services/photo_service.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
@@ -28,7 +28,7 @@ class GalleryScreen extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.photo_album_outlined, color: AppColors.primary),
                 title: Text('Save as album', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.cardForeground)),
-                subtitle: Text('Creates "$albumName" in Photos', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
+                subtitle: Text('Files them together in Photos', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
                 onTap: () => Navigator.pop(context, true),
               ),
               ListTile(
@@ -48,7 +48,7 @@ class GalleryScreen extends StatelessWidget {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
       content: Text(saved == files.length
-          ? (choice ? 'Saved ${files.length} photos to album "$albumName"' : 'Saved ${files.length} photos to Photos')
+          ? (choice ? 'Saved ${files.length} photos as an album in Photos' : 'Saved ${files.length} photos to Photos')
           : 'Saved $saved of ${files.length} photos — check Photos access in Settings'),
     ));
   }
@@ -91,7 +91,7 @@ class GalleryScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '$photoCount/36 · $dateText${roll.stock == FilmStock.classic ? '' : ' · ${roll.stock.label.toUpperCase()}'}',
+                          '$photoCount/36 · $dateText${roll.stockLabel == null ? '' : ' · ${roll.stockLabel}'}',
                           style: TextStyle(
                             fontFamily: AppFonts.mono,
                             fontSize: 10.5,
@@ -101,11 +101,7 @@ class GalleryScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _RoundIconButton(
-                    icon: Icons.ios_share,
-                    tooltip: 'Share options',
-                    onTap: () {},
-                  ),
+                  
                 ],
               ),
             ),
@@ -122,7 +118,7 @@ class GalleryScreen extends StatelessWidget {
                   childAspectRatio: 0.82,
                 ),
                 itemCount: photoCount,
-                itemBuilder: (context, index) => _PolaroidPhoto(index: index, file: files[index]),
+                itemBuilder: (context, index) => _Reveal(index: index, child: _PolaroidPhoto(index: index, file: files[index])),
               ),
             ),
             _ActionToolbar(
@@ -253,21 +249,20 @@ class _ActionToolbar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: AppColors.border),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 18, offset: const Offset(0, 8))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 18, offset: const Offset(0, 8))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ToolbarAction(icon: Icons.ios_share, label: 'SHARE'),
-            const SizedBox(width: 26),
-            _ToolbarAction(icon: Icons.download_outlined, label: 'SAVE ALL', onTap: onSaveAll),
-            const SizedBox(width: 26),
-            _ToolbarAction(icon: Icons.delete_outline, label: 'DELETE', onTap: onDelete),
+            
+            _ToolbarAction(icon: Icons.download_outlined, label: 'SAVE TO PHOTOS', onTap: onSaveAll),
+            Container(width: 1, height: 30, margin: const EdgeInsets.symmetric(horizontal: 6), color: AppColors.border),
+            _ToolbarAction(icon: Icons.delete_outline, label: 'DELETE', onTap: onDelete, color: const Color(0xFFB2362A)),
           ],
         ),
       ),
@@ -279,23 +274,78 @@ class _ToolbarAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
+  final Color? color;
 
-  const _ToolbarAction({required this.icon, required this.label, this.onTap});
+  const _ToolbarAction({required this.icon, required this.label, this.onTap, this.color});
 
   @override
   Widget build(BuildContext context) {
+    final tint = color ?? AppColors.cardForeground;
     return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap ?? () {},
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 19, color: AppColors.foreground),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontFamily: AppFonts.mono, fontSize: 8.5, letterSpacing: .5, color: AppColors.foreground),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 68, minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 21, color: tint),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(fontFamily: AppFonts.mono, fontSize: 10.5, letterSpacing: .5, color: tint),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Prints slide in one after another when a developed roll is opened.
+class _Reveal extends StatefulWidget {
+  final int index;
+  final Widget child;
+
+  const _Reveal({required this.index, required this.child});
+
+  @override
+  State<_Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<_Reveal> {
+  bool _shown = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(Duration(milliseconds: 80 + 120 * widget.index.clamp(0, 8)), () {
+      if (mounted) setState(() => _shown = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _shown ? 1 : 0,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: _shown ? Offset.zero : const Offset(0, 0.08),
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }
