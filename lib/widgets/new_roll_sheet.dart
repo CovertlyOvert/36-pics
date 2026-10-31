@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
+import 'package:thirtysix_pics/widgets/stock_thumbnail.dart';
 
 /// Shows the "Load New Film" bottom sheet and resolves with the trip name and
 /// film stock the user chose, or null if they cancelled.
@@ -40,7 +41,8 @@ class _NewRollSheetState extends State<_NewRollSheet> {
           color: AppColors.card,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: Column(
+        child: SingleChildScrollView(
+         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -108,7 +110,7 @@ class _NewRollSheetState extends State<_NewRollSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'FILM STOCK',
+                'STARTING FILM STOCK',
                 style: TextStyle(
                   fontFamily: AppFonts.mono,
                   fontSize: 10.5,
@@ -119,49 +121,66 @@ class _NewRollSheetState extends State<_NewRollSheet> {
             ),
             const SizedBox(height: 10),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: FilmStock.values.map((stock) {
                 final isSelected = stock == _selected;
                 return Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => setState(() => _selected = stock),
                       child: Column(
                         children: [
                           Container(
-                            height: 64,
+                            height: 84,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: stock.swatch,
-                              ),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected ? AppColors.primary : AppColors.border,
-                                width: isSelected ? 2 : 1,
+                                width: isSelected ? 2.5 : 1,
                               ),
                             ),
-                            alignment: Alignment.topRight,
-                            padding: const EdgeInsets.all(4),
-                            child: isSelected
-                                ? Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
-                                    child: Icon(Icons.check, size: 10, color: AppColors.primaryForeground),
-                                  )
-                                : null,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(9),
+                                  child: StockThumbnail(stock: stock),
+                                ),
+                                if (isSelected)
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: Container(
+                                      width: 18,
+                                      height: 18,
+                                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
+                                      child: Icon(Icons.check, size: 12, color: AppColors.primaryForeground),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             stock.label,
                             style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
                               color: isSelected
                                   ? AppColors.cardForeground
-                                  : AppColors.cardForeground.withOpacity(0.6),
+                                  : AppColors.cardForeground.withOpacity(0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            stock.descriptor,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              height: 1.25,
+                              color: AppColors.cardForeground.withOpacity(0.65),
                             ),
                           ),
                         ],
@@ -196,6 +215,7 @@ class _NewRollSheetState extends State<_NewRollSheet> {
               child: Text('Cancel', style: TextStyle(color: AppColors.cardForeground.withOpacity(0.6))),
             ),
           ],
+         ),
         ),
       ),
     );

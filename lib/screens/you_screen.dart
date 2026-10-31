@@ -99,6 +99,21 @@ class _YouScreenState extends State<YouScreen> {
                 ),
             ],
           ),
+          const SizedBox(height: 14),
+          Text(
+            developDelayOptions
+                .firstWhere(
+                  (o) => o.duration == RollStore.instance.developDelay,
+                  orElse: () => developDelayOptions.first,
+                )
+                .caption,
+            style: TextStyle(
+              fontFamily: AppFonts.heading,
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+              color: AppColors.foregroundSoft,
+            ),
+          ),
         ],
       ),
     );

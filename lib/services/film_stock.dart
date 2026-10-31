@@ -14,6 +14,12 @@ extension FilmStockLook on FilmStock {
         FilmStock.faded70s => "Faded '70s",
       };
 
+  String get descriptor => switch (this) {
+        FilmStock.classic => 'Warm, contrasty, true color',
+        FilmStock.noir => 'B&W, high contrast, deep shadows',
+        FilmStock.faded70s => 'Low contrast, lifted shadows, warm cast',
+      };
+
   List<Color> get swatch => switch (this) {
         FilmStock.classic => const [Color(0xFFE7A05A), Color(0xFFB5502E)],
         FilmStock.noir => const [Color(0xFF9A9388), Color(0xFF4C463D)],

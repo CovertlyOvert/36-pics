@@ -136,7 +136,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _capture() async {
@@ -147,6 +149,7 @@ class _CameraScreenState extends State<CameraScreen> {
         !controller.value.isInitialized) {
       return;
     }
+    final stock = _roll.stock;
     setState(() {
       _capturing = true;
       _shutterFlash = true;
@@ -157,8 +160,12 @@ class _CameraScreenState extends State<CameraScreen> {
     });
     try {
       final shot = await controller.takePicture();
-      final styled = await applyFilmStock(File(shot.path), _roll.stock);
-      final saved = await RollStore.instance.addPhoto(widget.rollId, styled);
+      final styled = await applyFilmStock(File(shot.path), stock);
+      final saved = await RollStore.instance.addPhoto(
+        widget.rollId,
+        styled,
+        stock: stock,
+      );
       if (!mounted) return;
       if (!saved) {
         _showError('Could not save photo');
@@ -177,7 +184,9 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => DevelopingScreen(rollId: widget.rollId)),
+        MaterialPageRoute(
+          builder: (context) => DevelopingScreen(rollId: widget.rollId),
+        ),
       );
     }
   }
@@ -192,171 +201,233 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0807),
-      body: _cameraError
-          ? const Center(
-              child: Text(
-                'Camera not supported or failed to load.',
-                style: TextStyle(color: Colors.white),
-              ),
-            )
-          : (_initializeControllerFuture == null || !_controller!.value.isInitialized)
-              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+      body:
+          _cameraError
+              ? const Center(
+                child: Text(
+                  'Camera not supported or failed to load.',
+                  style: TextStyle(color: Colors.white),
+                ),
+              )
+              : (_initializeControllerFuture == null ||
+                  !_controller!.value.isInitialized)
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
               : Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final preview = _controller!.value.previewSize!;
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTapDown: (d) => _focusAt(d.localPosition, constraints.biggest),
-                          onScaleStart: (_) => _baseZoom = _zoom,
-                          onScaleUpdate: (d) => _setZoom(_baseZoom * d.scale),
-                          child: ClipRect(
-                            child: SizedBox.expand(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: preview.height,
-                                  height: preview.width,
-                                  child: _roll.stock == FilmStock.classic
-                                      ? CameraPreview(_controller!)
-                                      : ColorFiltered(
-                                          colorFilter: ColorFilter.matrix(_roll.stock.matrix),
+                fit: StackFit.expand,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final preview = _controller!.value.previewSize!;
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown:
+                            (d) =>
+                                _focusAt(d.localPosition, constraints.biggest),
+                        onScaleStart: (_) => _baseZoom = _zoom,
+                        onScaleUpdate: (d) => _setZoom(_baseZoom * d.scale),
+                        child: ClipRect(
+                          child: SizedBox.expand(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: preview.height,
+                                height: preview.width,
+                                child:
+                                    _roll.stock == FilmStock.classic
+                                        ? CameraPreview(_controller!)
+                                        : ColorFiltered(
+                                          colorFilter: ColorFilter.matrix(
+                                            _roll.stock.matrix,
+                                          ),
                                           child: CameraPreview(_controller!),
                                         ),
-                                ),
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  ),
 
-                    if (_focusPoint != null)
-                      Positioned(
-                        left: _focusPoint!.dx - 32,
-                        top: _focusPoint!.dy - 32,
-                        child: IgnorePointer(
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.amber, width: 1.5),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                  if (_focusPoint != null)
+                    Positioned(
+                      left: _focusPoint!.dx - 32,
+                      top: _focusPoint!.dy - 32,
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.amber, width: 1.5),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
                       ),
-
-                    IgnorePointer(
-                      child: AnimatedOpacity(
-                        opacity: _shutterFlash ? 0.7 : 0,
-                        duration: const Duration(milliseconds: 80),
-                        child: Container(color: Colors.white),
-                      ),
                     ),
 
-                    // Rule-of-thirds composition guide
-                    IgnorePointer(
-                      child: CustomPaint(
-                        size: Size.infinite,
-                        painter: _RuleOfThirdsPainter(),
+                  IgnorePointer(
+                    child: AnimatedOpacity(
+                      opacity: _shutterFlash ? 0.7 : 0,
+                      duration: const Duration(milliseconds: 80),
+                      child: Container(color: Colors.white),
+                    ),
+                  ),
+
+                  // Rule-of-thirds composition guide
+                  IgnorePointer(
+                    child: CustomPaint(
+                      size: Size.infinite,
+                      painter: _RuleOfThirdsPainter(),
+                    ),
+                  ),
+
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          FrameCounterDial(
+                            current: photoCount,
+                            total: maxPhotos,
+                            size: 48,
+                            ringColor: Colors.black.withOpacity(0.45),
+                            progressColor: Colors.white,
+                            textColor: Colors.white,
+                          ),
+                        ],
                       ),
                     ),
+                  ),
 
-                    SafeArea(
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.45),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: AppColors.primary.withOpacity(0.5)),
-                              ),
-                              child: Text(
-                                _roll.name.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  letterSpacing: 1.5,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Courier Prime',
+                            _StockSwitcher(
+                              current: _roll.stock,
+                              onChanged: (stock) async {
+                                await RollStore.instance.setStock(
+                                  widget.rollId,
+                                  stock,
+                                );
+                                if (mounted) setState(() {});
+                              },
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const SizedBox(width: 34),
+                                _GlassButton(
+                                  icon:
+                                      _flashOn
+                                          ? Icons.flash_on
+                                          : Icons.flash_off,
+                                  onTap: _toggleFlash,
+                                  tooltip: 'Toggle flash',
                                 ),
-                              ),
-                            ),
-                            FrameCounterDial(
-                              current: photoCount,
-                              total: maxPhotos,
-                              size: 48,
-                              ringColor: Colors.black.withOpacity(0.45),
-                              progressColor: Colors.white,
-                              textColor: Colors.white,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    SafeArea(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const SizedBox(width: 34),
-                              _GlassButton(
-                                icon: _flashOn ? Icons.flash_on : Icons.flash_off,
-                                onTap: _toggleFlash,
-                                tooltip: 'Toggle flash',
-                              ),
-                              GestureDetector(
-                                onTap: _capture,
-                                child: Container(
-                                  width: 78,
-                                  height: 78,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 4),
-                                  ),
-                                  child: Center(
-                                    child: Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                                      child: Center(
-                                        child: Container(
-                                          width: 14,
-                                          height: 14,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: AppColors.primary,
+                                GestureDetector(
+                                  onTap: _capture,
+                                  child: Container(
+                                    width: 78,
+                                    height: 78,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 4,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white,
+                                        ),
+                                        child: Center(
+                                          child: Container(
+                                            width: 14,
+                                            height: 14,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              _GlassButton(
-                                icon: Icons.flip_camera_ios_outlined,
-                                onTap: _flipCamera,
-                                tooltip: 'Flip camera',
-                              ),
-                              const SizedBox(width: 34),
-                            ],
-                          ),
+                                _GlassButton(
+                                  icon: Icons.flip_camera_ios_outlined,
+                                  onTap: _flipCamera,
+                                  tooltip: 'Flip camera',
+                                ),
+                                const SizedBox(width: 34),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+    );
+  }
+}
+
+class _StockSwitcher extends StatelessWidget {
+  final FilmStock current;
+  final ValueChanged<FilmStock> onChanged;
+
+  const _StockSwitcher({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final stock in FilmStock.values)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(stock),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 36, minWidth: 64),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: stock == current ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
                 ),
+                child: Text(
+                  stock.label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: stock == current ? Colors.black : Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -366,7 +437,11 @@ class _GlassButton extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
 
-  const _GlassButton({required this.icon, required this.onTap, required this.tooltip});
+  const _GlassButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -393,9 +468,10 @@ class _GlassButton extends StatelessWidget {
 class _RuleOfThirdsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.14)
-      ..strokeWidth = 1;
+    final paint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.14)
+          ..strokeWidth = 1;
     final x1 = size.width / 3;
     final x2 = size.width * 2 / 3;
     final y1 = size.height / 3;

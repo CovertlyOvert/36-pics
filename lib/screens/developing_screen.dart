@@ -41,6 +41,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
     final roll = _roll;
     final isReady = roll.isDeveloped;
     final progress = isReady ? 1.0 : roll.developProgress;
+    final (big, small) = countdownParts(roll.timeRemaining);
     return Scaffold(
       backgroundColor: AppColors.primaryDeep,
       body: Container(
@@ -53,33 +54,14 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 36),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 150,
-                  height: 150,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 2.5,
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          valueColor: AlwaysStoppedAnimation(AppColors.secondary),
-                        ),
-                      ),
-                      Icon(Icons.camera_roll_outlined, color: AppColors.primaryForeground, size: 28),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
                 Text(
                   'ROLL · ${roll.name.toUpperCase()}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: AppFonts.mono,
                     fontSize: 11,
@@ -88,49 +70,83 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                     color: AppColors.secondary,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: 232,
+                  height: 232,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 232,
+                        height: 232,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 8,
+                          strokeCap: StrokeCap.round,
+                          backgroundColor: Colors.white.withOpacity(0.16),
+                          valueColor: AlwaysStoppedAnimation(AppColors.primaryForeground),
+                        ),
+                      ),
+                      if (isReady)
+                        Icon(Icons.check_rounded, color: AppColors.primaryForeground, size: 84)
+                      else
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              big,
+                              style: TextStyle(
+                                fontFamily: AppFonts.heading,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 60,
+                                height: 1,
+                                color: AppColors.primaryForeground,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              small,
+                              style: TextStyle(
+                                fontFamily: AppFonts.mono,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.primaryForeground,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'UNTIL READY',
+                              style: TextStyle(
+                                fontFamily: AppFonts.mono,
+                                fontSize: 10,
+                                letterSpacing: 1.5,
+                                color: AppColors.primaryForeground.withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
                 Text(
-                  isReady ? 'Your roll is\nready' : 'Your roll is\ndeveloping',
+                  isReady ? 'Your roll is ready' : 'Your roll is developing',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: AppFonts.heading,
                     fontWeight: FontWeight.w600,
-                    fontSize: 27,
-                    height: 1.25,
+                    fontSize: 26,
                     color: AppColors.primaryForeground,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
-                  '${roll.photos.length} exposures',
-                  style: TextStyle(fontSize: 13.5, color: AppColors.primaryForeground.withOpacity(0.75)),
-                ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: 220,
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 4,
-                          backgroundColor: Colors.white.withOpacity(0.12),
-                          valueColor: AlwaysStoppedAnimation(AppColors.secondary),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        isReady ? 'READY TO VIEW' : 'READY IN ${formatRemaining(roll.timeRemaining).toUpperCase()}',
-                        style: TextStyle(
-                          fontFamily: AppFonts.mono,
-                          fontSize: 10,
-                          letterSpacing: 1,
-                          color: AppColors.primaryForeground.withOpacity(0.75),
-                        ),
-                      ),
-                    ],
-                  ),
+                  isReady
+                      ? '${roll.photos.length} exposures'
+                      : '${roll.photos.length} exposures · ready ${readyOnLabel(roll.developAt!)}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: AppColors.primaryForeground.withOpacity(0.85)),
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -152,7 +168,10 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                         )
                       : TextButton(
                           onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.primaryForeground),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primaryForeground,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
                           child: const Text('Back to Library'),
                         ),
                 ),

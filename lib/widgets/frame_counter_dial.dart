@@ -10,6 +10,10 @@ class FrameCounterDial extends StatelessWidget {
   final Color ringColor;
   final Color progressColor;
   final Color textColor;
+  final double strokeFraction;
+  final String? centerText;
+  final String? caption;
+  final String? centerFontFamily;
 
   const FrameCounterDial({
     super.key,
@@ -19,6 +23,10 @@ class FrameCounterDial extends StatelessWidget {
     required this.progressColor,
     required this.textColor,
     this.size = 76,
+    this.strokeFraction = 0.09,
+    this.centerText,
+    this.caption,
+    this.centerFontFamily,
   });
 
   @override
@@ -36,28 +44,29 @@ class FrameCounterDial extends StatelessWidget {
               progress: progress,
               ringColor: ringColor,
               progressColor: progressColor,
+              strokeFraction: strokeFraction,
             ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '$current',
+                centerText ?? '$current',
                 style: TextStyle(
-                  fontFamily: 'Courier Prime',
+                  fontFamily: centerFontFamily ?? 'Courier Prime',
                   fontWeight: FontWeight.bold,
-                  fontSize: size * 0.26,
+                  fontSize: centerText != null ? size * 0.36 : size * 0.26,
                   color: textColor,
                   height: 1,
                 ),
               ),
               Text(
-                'OF $total',
+                caption ?? 'OF $total',
                 style: TextStyle(
                   fontFamily: 'Courier Prime',
-                  fontSize: size * 0.105,
+                  fontSize: caption != null ? size * 0.085 : size * 0.105,
                   letterSpacing: 1,
-                  color: textColor.withOpacity(0.75),
+                  color: textColor.withOpacity(0.85),
                 ),
               ),
             ],
@@ -72,16 +81,18 @@ class _DialPainter extends CustomPainter {
   final double progress;
   final Color ringColor;
   final Color progressColor;
+  final double strokeFraction;
 
   _DialPainter({
     required this.progress,
     required this.ringColor,
     required this.progressColor,
+    required this.strokeFraction,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokeWidth = size.width * 0.09;
+    final strokeWidth = size.width * strokeFraction;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
@@ -114,5 +125,6 @@ class _DialPainter extends CustomPainter {
   bool shouldRepaint(covariant _DialPainter oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.ringColor != ringColor ||
-      oldDelegate.progressColor != progressColor;
+      oldDelegate.progressColor != progressColor ||
+      oldDelegate.strokeFraction != strokeFraction;
 }
