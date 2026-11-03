@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:thirtysix_pics/main.dart';
 import 'package:image/image.dart' as img;
+import 'package:thirtysix_pics/screens/rolls_screen.dart';
 import 'package:thirtysix_pics/services/film_stock.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
@@ -29,7 +31,6 @@ void main() {
 
     expect(find.text('Exposures'), findsOneWidget);
     expect(find.text('NO FILM LOADED'), findsOneWidget);
-    expect(find.text('0 rolls'), findsOneWidget);
     expect(find.text('Your rolls will develop here.'), findsOneWidget);
     expect(find.text('Load New Film'), findsOneWidget);
   });
@@ -51,7 +52,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const ThirtySixPicsApp());
 
-    await tester.tap(find.text('YOU'));
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Darkroom'));
@@ -62,6 +63,176 @@ void main() {
     await tester.pumpAndSettle();
     expect(RollStore.instance.developDelay, const Duration(days: 7));
     expect(find.text('The real thing. Maximum anticipation.'), findsOneWidget);
+  });
+
+  /// A finished roll without real photo files; enough for list/filter logic.
+  Future<Roll> finishedRoll(
+    String name, {
+    required Duration finishedAgo,
+    bool developed = true,
+    FilmStock stock = FilmStock.classic,
+    int shots = 3,
+  }) async {
+    final roll = await RollStore.instance.createRoll(name, stock: stock);
+    for (var i = 0; i < shots; i++) {
+      roll.photos.add('$i.jpg');
+      roll.photoStocks.add(stock.name);
+    }
+    roll.completedAt = DateTime.now().subtract(finishedAgo);
+    roll.developAt =
+        developed
+            ? roll.completedAt!.add(const Duration(seconds: 15))
+            : DateTime.now().add(const Duration(hours: 5));
+    return roll;
+  }
+
+  void usePhoneScreen(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1170, 4800);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+  }
+
+  testWidgets('Home previews the latest developed rolls and what is developing', (
+    WidgetTester tester,
+  ) async {
+    usePhoneScreen(tester);
+    await tester.runAsync(() async {
+      for (var i = 1; i <= 5; i++) {
+        await finishedRoll('Trip $i', finishedAgo: Duration(days: 10 - i));
+      }
+      await finishedRoll('In the tank', finishedAgo: Duration.zero, developed: false);
+    });
+    await tester.pumpWidget(const ThirtySixPicsApp());
+
+    expect(find.text('Developing'), findsOneWidget);
+    expect(find.text('In the tank'), findsOneWidget);
+    expect(find.text('Trip 5'), findsOneWidget);
+    expect(find.text('Trip 2'), findsOneWidget);
+    expect(find.text('Trip 1'), findsNothing); // only the latest four
+    expect(find.text('See all 6 ›'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('See all on Home opens the Rolls archive', (
+    WidgetTester tester,
+  ) async {
+    usePhoneScreen(tester);
+    await tester.runAsync(() => finishedRoll('Trip', finishedAgo: const Duration(days: 1)));
+    await tester.pumpWidget(const ThirtySixPicsApp());
+
+    await tester.tap(find.text('See all 1 ›'));
+    await tester.pump();
+
+    expect(find.text('ARCHIVE'), findsOneWidget);
+    expect(find.text('1 roll · 3 photos'), findsOneWidget);
+  });
+
+  testWidgets('Rolls tab filters by status and by film stock', (
+    WidgetTester tester,
+  ) async {
+    usePhoneScreen(tester);
+    await tester.runAsync(() async {
+      await finishedRoll('Goa', finishedAgo: const Duration(days: 3));
+      await finishedRoll('Night walk', finishedAgo: const Duration(days: 2), stock: FilmStock.noir);
+      await finishedRoll('Waiting', finishedAgo: Duration.zero, developed: false);
+    });
+    await tester.pumpWidget(const ThirtySixPicsApp());
+    await tester.tap(find.text('ROLLS'));
+    await tester.pump();
+
+    expect(find.text('3 rolls · 9 photos'), findsOneWidget);
+    expect(find.text('All 3'), findsOneWidget);
+    expect(find.text('Developing 1'), findsOneWidget);
+    expect(find.text('Ready 2'), findsOneWidget);
+    expect(find.text('Goa'), findsOneWidget);
+
+    await tester.tap(find.text('Developing 1'));
+    await tester.pump();
+    expect(find.text('Waiting'), findsOneWidget);
+    expect(find.text('Goa'), findsNothing);
+    expect(find.text('1 of 3'), findsOneWidget);
+
+    await tester.tap(find.text('Ready 2'));
+    await tester.pump();
+    await tester.tap(find.text('Noir'));
+    await tester.pump();
+    expect(find.text('Night walk'), findsOneWidget);
+    expect(find.text('Goa'), findsNothing);
+
+    await tester.tap(find.text('Developing 1'));
+    await tester.pump();
+    expect(find.text('No rolls match.'), findsOneWidget);
+    await tester.tap(find.text('Clear filters'));
+    await tester.pump();
+    expect(find.text('Goa'), findsOneWidget);
+    expect(find.text('Waiting'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Rolls tab hides the stock filter until two stocks are in use', (
+    WidgetTester tester,
+  ) async {
+    usePhoneScreen(tester);
+    await tester.runAsync(() => finishedRoll('Goa', finishedAgo: const Duration(days: 1)));
+    await tester.pumpWidget(const ThirtySixPicsApp());
+    await tester.tap(find.text('ROLLS'));
+    await tester.pump();
+
+    expect(find.text('Any stock'), findsNothing);
+  });
+
+  testWidgets('Rolls tab explains itself when there are no rolls', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ThirtySixPicsApp());
+    await tester.tap(find.text('ROLLS'));
+    await tester.pump();
+
+    expect(find.text('Tap the shutter to load your first roll.'), findsOneWidget);
+    expect(find.text('0 rolls · 0 photos'), findsOneWidget);
+  });
+
+  group('filterRolls', () {
+    Roll roll(String id, int daysAgo, {FilmStock stock = FilmStock.classic, bool developed = true}) {
+      final done = DateTime.now().subtract(Duration(days: daysAgo));
+      return Roll(
+        id: id,
+        name: id,
+        createdAt: done,
+        stock: stock,
+        photos: ['a.jpg'],
+        photoStocks: [stock.name],
+        completedAt: done,
+        developAt: developed ? done.add(const Duration(seconds: 15)) : DateTime.now().add(const Duration(hours: 1)),
+      );
+    }
+
+    final rolls = [
+      roll('a', 5),
+      roll('b', 3, stock: FilmStock.noir),
+      roll('c', 1, developed: false),
+      Roll(id: 'shooting', name: 'shooting', createdAt: DateTime.now()),
+    ];
+
+    List<String> ids(List<Roll> r) => r.map((e) => e.id).toList();
+
+    test('lists finished rolls newest first and skips the one being shot', () {
+      expect(ids(filterRolls(rolls)), ['c', 'b', 'a']);
+      expect(ids(filterRolls(rolls, newestFirst: false)), ['a', 'b', 'c']);
+    });
+
+    test('filters by developing or ready', () {
+      expect(ids(filterRolls(rolls, status: RollStatus.developing)), ['c']);
+      expect(ids(filterRolls(rolls, status: RollStatus.ready)), ['b', 'a']);
+    });
+
+    test('filters by film stock, matching any frame shot on it', () {
+      expect(ids(filterRolls(rolls, stock: FilmStock.noir)), ['b']);
+      final mixed = roll('m', 2)..photoStocks.add(FilmStock.noir.name);
+      expect(ids(filterRolls([...rolls, mixed], stock: FilmStock.noir)), ['m', 'b']);
+    });
   });
 
   group('Countdown formatting', () {
