@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:thirtysix_pics/services/roll_store.dart';
 import 'package:thirtysix_pics/theme/theme.dart';
 
@@ -33,6 +34,7 @@ class _YouScreenState extends State<YouScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: statusBarStyle(),
         title: Text('You', style: TextStyle(fontFamily: AppFonts.heading, color: AppColors.foreground)),
       ),
       body: ListView(

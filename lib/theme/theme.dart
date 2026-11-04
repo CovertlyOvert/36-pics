@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 enum AppThemeMode { vintage, darkroom }
 
@@ -149,3 +150,9 @@ ThemeData buildAppTheme() {
     ),
   );
 }
+
+/// Light status-bar icons on the dark Darkroom theme, dark ones otherwise.
+SystemUiOverlayStyle statusBarStyle() =>
+    ThemeController.instance.mode == AppThemeMode.darkroom
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;

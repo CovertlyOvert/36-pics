@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/app_shell.dart';
 import 'services/roll_store.dart';
 import 'theme/theme.dart';
 
@@ -37,7 +37,7 @@ class _ThirtySixPicsAppState extends State<ThirtySixPicsApp> {
       title: '36 Pics',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const HomeScreen(),
+      home: const AppShell(),
     );
   }
 }
