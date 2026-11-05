@@ -1,4 +1,4 @@
-package com.example.thirtysix_pics
+package com.ankit.thirtysixpics
 
 import io.flutter.embedding.android.FlutterActivity
 
