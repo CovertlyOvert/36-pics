@@ -61,11 +61,11 @@ On vacations or weekend trips, we often get lost in taking *too many* pictures, 
 
 ## 🛠 Tech Stack
 
-- [Flutter](https://flutter.dev/) (iOS-first; Android builds but is untested on a device)
+- [Flutter](https://flutter.dev/) (iOS and Android)
 - `camera` for the viewfinder and capture
 - `image` to bake film-stock looks into each photo (on a background isolate)
 - `path_provider` + a small JSON store for rolls and photos in the app's private storage
-- `gallery_saver` to export developed rolls to the Photos library
+- `gal` to export developed rolls to the Photos library
 - Custom `ThemeController` and `RollStore` (`ChangeNotifier` singletons) — no external state-management package
 
 ---
