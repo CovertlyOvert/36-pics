@@ -6,7 +6,7 @@ import 'package:thirtysix_pics/theme/theme.dart';
 import 'package:thirtysix_pics/widgets/confirm_delete_roll.dart';
 import 'package:thirtysix_pics/widgets/frame_counter_dial.dart';
 import 'package:thirtysix_pics/widgets/roll_card.dart';
-import 'package:thirtysix_pics/widgets/sprocket_mark.dart';
+import 'package:thirtysix_pics/widgets/camera_mark.dart';
 import 'package:thirtysix_pics/widgets/you_button.dart';
 
 /// How many developed rolls Home previews before pointing at the Rolls tab.
@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        SprocketMark(size: 22, color: AppColors.primary),
+                        CameraMark(size: 28, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text(
                           '36 PICS',
