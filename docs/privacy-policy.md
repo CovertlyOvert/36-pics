@@ -3,7 +3,7 @@
 **Effective date:** 21 November 2026
 **App:** 36 Pics (Android and iOS, app ID `com.ankit.thirtysixpics`)
 **Developer:** Ankit Anurag
-**Contact:** ankit.anurag.2016@gmail.com
+**Contact:** privacy@toormai.com
 
 ## The short version
 
@@ -61,4 +61,4 @@ If the app ever changes in a way that affects your privacy, for example by addin
 ## Contact
 
 Ankit Anurag
-ankit.anurag.2016@gmail.com
+privacy@toormai.com

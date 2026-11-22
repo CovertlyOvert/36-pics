@@ -55,7 +55,7 @@ Perfect for holidays, weekend trips, parties and anyone who wants to slow down a
 
 **What's new (v1.0):** `First release. Load a roll, shoot 36, let it develop.`
 
-**Contact details to enter:** email `ankit.anurag.2016@gmail.com`, website optional, privacy policy URL `https://36pics.toormai.com/privacy` (proposed)
+**Contact details to enter:** email `support@toormai.com`, website `https://36pics.toormai.com`, privacy policy URL `https://36pics.toormai.com/privacy` (all proposed until the site is live)
 
 ### Play Console declarations
 
@@ -160,7 +160,7 @@ A physical device is needed to take photos, because the simulator has no camera.
 
 | Question | Decision |
 |---|---|
-| Developer name and contact | Ankit Anurag, `ankit.anurag.2016@gmail.com` (in the policy and here) |
+| Developer name and public contact | Ankit Anurag. Public addresses are forwarding aliases `privacy@toormai.com` (policy) and `support@toormai.com` (support page and store forms), so the personal inbox is not published |
 | iPad | iPhone only. `TARGETED_DEVICE_FAMILY` is now `1` and the iPad orientation list is removed |
 | Play target audience | 13 and over |
 | Privacy policy hosting | Recommended below (your call) |
@@ -176,17 +176,24 @@ You own `toormai.com` (registered with Cloudflare) and plan a portfolio there. *
 | GitHub Pages | Free and simple, but the URL is `github.io` unless you also configure DNS, and it publishes from the repo your handle owns |
 | Google Sites / Notion | Fine for a stopgap, but the URL is not on your domain and can change |
 
-**Setup (about 10 minutes, needs your Cloudflare login, so you do these):**
-1. I add a small `site/` folder to this repo with `index.html`, `privacy/index.html` and `support/index.html`, built from `docs/privacy-policy.md`. No build step.
-2. Cloudflare dashboard, Workers & Pages, Create, Pages, Connect to Git, pick `36-pics`, build command empty, output directory `site`.
-3. In that project, Custom domains, add `36pics.toormai.com`. DNS is created automatically.
-4. Paste the three URLs into the store forms.
+**The site is built.** `site/` has the landing, `/privacy` and `/support` pages. It is plain static HTML with no build step on Cloudflare. The privacy page is generated from `docs/privacy-policy.md`, so edit the policy there and run `python3 tools/build_site.py` to regenerate. The site makes no third-party requests (fonts and images are self-hosted) and ships strict security headers in `site/_headers`.
 
-**Contact address.** These pages and both store listings are public. Consider a forwarding address on your domain (Cloudflare Email Routing is free), for example `privacy@toormai.com` forwarding to your Gmail, so your personal inbox is not published. It costs a few minutes now and means three edits (policy, support page, store forms) if you switch later. Say the word and I will swap it in.
+**Your setup (about 15 minutes, needs your Cloudflare login). Do the email first: the policy and support page publish addresses that must work.**
+
+1. **Email forwarding.** Cloudflare dashboard, `toormai.com`, Email, Email Routing, Enable (this adds the MX and SPF records for you). Add your Gmail as a destination address and click the verification link Cloudflare sends. Then add two custom addresses, `privacy@toormai.com` and `support@toormai.com`, both forwarding to that Gmail. Send a test mail to each.
+2. **Pages project.** Workers & Pages, Create, Pages, Connect to Git, pick `36-pics`. Production branch `main`, build command empty, build output directory `site`.
+3. **Custom domain.** In that project, Custom domains, add `36pics.toormai.com`. DNS is created automatically because the zone is on Cloudflare.
+4. **Check.** Open `https://36pics.toormai.com/`, `/privacy/` and `/support/`, then paste those URLs and `support@toormai.com` into the store forms.
+
+Note that Pages deploys from `main`, so the site goes live only after this branch is merged. You can also use the project's preview URL on the branch before then.
+
+Replying *from* `support@toormai.com` is not covered by Email Routing (it only receives). Reply from Gmail for now; Gmail's "Send mail as" with a Cloudflare-compatible SMTP service can be set up later if you want replies to come from the alias.
+
+App Store Connect and Play Console also ask for a private account contact. That one can stay your Gmail, since the stores do not publish it.
 
 ## Next steps
 
-1. Say yes and I build the `site/` folder (step 1 above), then you do steps 2 and 3.
+1. Merge the PR, then do the four setup steps above (email first).
 2. Enrol in the Apple Developer Program ($99/year) and the Google Play Console ($25 once).
 3. Real-device Android test, then the Play closed test.
 4. Secondary App Store category **[OPEN]**, and check that the name "36 Pics: Film Roll Camera" is free on both stores.
