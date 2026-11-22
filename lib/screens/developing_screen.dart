@@ -172,7 +172,7 @@ class _DevelopingScreenState extends State<DevelopingScreen> {
                             foregroundColor: AppColors.primaryForeground,
                             minimumSize: const Size.fromHeight(48),
                           ),
-                          child: const Text('Back to Library'),
+                          child: const Text('Back to Rolls'),
                         ),
                 ),
               ],

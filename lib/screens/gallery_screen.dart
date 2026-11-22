@@ -71,7 +71,7 @@ class GalleryScreen extends StatelessWidget {
                 children: [
                   _RoundIconButton(
                     icon: Icons.arrow_back_ios_new,
-                    tooltip: 'Back to library',
+                    tooltip: 'Back to rolls',
                     onTap: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 12),
@@ -230,7 +230,7 @@ class _RoundIconButton extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
-            child: Icon(icon, size: 16, color: AppColors.foreground),
+            child: Icon(icon, size: 16, color: AppColors.cardForeground),
           ),
         ),
       ),
